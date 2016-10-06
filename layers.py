@@ -59,8 +59,12 @@ class InnerProduct(Layer):
 
     def backward(self):
         self.bottom.grad += np.dot(self.top.grad, self.weights.transpose())
-        self.w_grad       = np.dot(self.bottom.value.transpose(), self.top.grad)
-        self.b_grad       = np.mean(self.top.grad, axis=0)
+
+        for i in range(self.batch_size):
+            self.w_grad += np.dot(self.bottom.value[i, np.newaxis].transpose(), self.top.grad[i, np.newaxis])
+        self.w_grad /= self.batch_size
+
+        self.b_grad = np.mean(self.top.grad, axis=0)
 
 class LinearInterpolation(Layer):
     def __init__(self, prev_layer1, prev_layer2):
@@ -156,6 +160,9 @@ class MSELoss(Layer):
         self.num_inputs = self.bottom.value.shape[1]
         self.top        = Blob(np.zeros(self.batch_size))
 
+    def reset_gradient(self):
+        self.top.reset_gradient()
+
     def forward(self):
         self.top.value = np.mean(np.square(self.bottom.value - self.labels.value), axis=1)
 
@@ -170,8 +177,14 @@ class CrossEntropyLoss(Layer):
         self.num_inputs = self.bottom.value.shape[1]
         self.top        = Blob(np.zeros(self.batch_size))
 
+    def reset_gradient(self):
+        self.top.reset_gradient()
+
+    def cross_entropy(self, i, l):
+        return -np.sum(np.multiply(np.log(i), l), axis = 1)
+
     def forward(self):
-        self.top.value = np.mean(- np.sum(np.multiply(np.log(self.bottom.value), self.labels.value), axis = 1))
+        self.top.value = np.mean(self.cross_entropy(self.bottom.value, self.labels.value))
 
     def backward(self):
         self.bottom.grad += - self.labels.value / self.bottom.value * self.top.grad
