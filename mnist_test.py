@@ -25,10 +25,10 @@ fc4 = nn.add('fc4', InnerProduct(relu3, 10))
 relu4 = nn.add('relu4', ReLu(fc4))
 '''
 fc5 = nn.add('fc5', InnerProduct(i, 10))
-softmax = nn.add('softmax', Softmax(fc5))
-loss = nn.add('loss', CrossEntropyLoss(softmax, l))
+softmax_loss = nn.add('softmax', SoftmaxCrossEntropyLoss(fc5, l))
+#loss = nn.add('loss', CrossEntropyLoss(softmax, l))
 
-step_size = 0.005
+step_size = 0.5
 
 nn.init_params()
 
@@ -51,10 +51,11 @@ val_accuracy = []
 val_iter = []
 
 # training
-epochs = 5
+epochs = 1
 train_samples = 55000
 validation_samples = 5000
 num_batches = train_samples / batch_size
+num_batches = 1000
 test_interval = 50
 
 for epoch in range(epochs):
@@ -72,7 +73,7 @@ for epoch in range(epochs):
         nn.reset_gradients()
 
         # minimise loss
-        loss.top.grad = -1.0
+        softmax_loss.loss.grad = -1.0
 
         nn.backward()
         nn.update_params(step_size)
@@ -88,7 +89,7 @@ for epoch in range(epochs):
 
                 nn.forward()
 
-                correct_samples += np.sum(np.argmax(softmax.top.value, axis = 1) == np.argmax(test_batch_y, axis = 1))
+                correct_samples += np.sum(np.argmax(softmax_loss.top.value, axis = 1) == np.argmax(test_batch_y, axis = 1))
 
             val_acc = float(correct_samples) / validation_samples * 100
             print('Validation accuracy %g' % val_acc)
@@ -100,17 +101,9 @@ for epoch in range(epochs):
             acc_line.set_ydata(val_accuracy)
             acc_ax.relim()
             acc_ax.autoscale_view()
-        
-        '''
-        # learning rate decay (horrible)
-        if len(val_losses) > 100 and batch % 100 == 0 and abs(val_losses[-100] - val_losses[-1]) < 0.0001:
-            step_size /= 10
-            print('new step size', step_size)
-            t_ax.axvline(batch)
-        '''
 
         # plot train loss over iterations
-        train_losses.append(loss.top.value)
+        train_losses.append(softmax_loss.loss.value)
         t_loss_line.set_xdata(np.arange(len(train_losses)))
         t_loss_line.set_ydata(train_losses)
         t_ax.relim()
@@ -138,7 +131,7 @@ for batch in range(test_samples / batch_size):
 
     nn.forward()
 
-    correct_samples += np.sum(np.argmax(softmax.top.value, axis = 1) == np.argmax(batch_y, axis = 1))
+    correct_samples += np.sum(np.argmax(softmax_loss.top.value, axis = 1) == np.argmax(batch_y, axis = 1))
 
 print('Correct: %d/%d' % (correct_samples, test_samples))
 print('Accuracy: %g' % (float(correct_samples) / test_samples * 100))
@@ -148,8 +141,8 @@ i.top.value[0, ...] = mnist.test.images[0]
 
 nn.forward()
 
-print('Final %r' % softmax.top.value[0])
-print('Prediction %d' % np.argmax(softmax.top.value[0]))
+print('Final %r' % softmax_loss.top.value[0])
+print('Prediction %d' % np.argmax(softmax_loss.top.value[0]))
 print('label', mnist.test.labels[0])
 plt.figure()
 plt.imshow(i.top.value[0].reshape(28, 28), cmap='gray')
