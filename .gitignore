@@ -1,0 +1,5 @@
+.*
+*.pyc
+
+MNIST_data
+
