@@ -152,6 +152,29 @@ class Softmax(Layer):
 
             self.bottom.grad[x] += np.dot(self.top.grad[x], jacobian)
 
+class SoftmaxCrossEntropyLoss(Layer):
+    def __init__(self, prev_layer, labels_layer):
+        self.bottom     = prev_layer.top
+        self.labels     = labels_layer.top
+        self.batch_size = self.bottom.value.shape[0]
+        self.num_inputs = self.bottom.value.shape[1]
+        self.top        = Blob(np.zeros_like(self.bottom.value))
+        self.loss       = Blob(np.zeros(1))
+
+    def reset_gradient(self):
+        self.top.reset_gradient()
+
+    def cross_entropy(self, i, l):
+        return -np.sum(np.multiply(np.log(i), l), axis = 1)
+
+    def forward(self):
+        exp_bottom      = np.exp(self.bottom.value)
+        self.top.value  = exp_bottom / np.sum(exp_bottom, axis = 1)[:, np.newaxis]
+        self.loss.value = np.mean(self.cross_entropy(self.top.value, self.labels.value))
+
+    def backward(self):
+        self.bottom.grad += (self.top.value - self.labels.value) * self.loss.grad
+
 class MSELoss(Layer):
     def __init__(self, prev_layer, labels_layer):
         self.bottom     = prev_layer.top
