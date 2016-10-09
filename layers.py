@@ -182,16 +182,13 @@ class MSELoss(Layer):
         self.labels     = labels_layer.top
         self.batch_size = self.bottom.value.shape[0]
         self.num_inputs = self.bottom.value.shape[1]
-        self.top        = Blob(np.zeros(self.batch_size))
-
-    def reset_gradient(self):
-        self.top.reset_gradient()
+        self.loss       = Blob(np.zeros(1))
 
     def forward(self):
-        self.top.value = np.mean(np.square(self.bottom.value - self.labels.value), axis=1)
+        self.loss.value = np.mean(np.square(self.bottom.value - self.labels.value))
 
     def backward(self):
-        self.bottom.grad += (2.0 / self.num_inputs) * (self.bottom.value - self.labels.value) * self.top.grad
+        self.bottom.grad += (2.0 / (self.num_inputs * self.batch_size)) * (self.bottom.value - self.labels.value) * self.loss.grad
 
 class CrossEntropyLoss(Layer):
     def __init__(self, prev_layer, labels_layer):
