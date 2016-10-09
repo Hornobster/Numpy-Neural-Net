@@ -196,17 +196,14 @@ class CrossEntropyLoss(Layer):
         self.labels     = labels_layer.top
         self.batch_size = self.bottom.value.shape[0]
         self.num_inputs = self.bottom.value.shape[1]
-        self.top        = Blob(np.zeros(self.batch_size))
-
-    def reset_gradient(self):
-        self.top.reset_gradient()
+        self.loss       = Blob(np.zeros(1))
 
     def cross_entropy(self, i, l):
         return -np.sum(np.multiply(np.log(i), l), axis = 1)
 
     def forward(self):
-        self.top.value = np.mean(self.cross_entropy(self.bottom.value, self.labels.value))
+        self.loss.value = np.mean(self.cross_entropy(self.bottom.value, self.labels.value))
 
     def backward(self):
-        self.bottom.grad += - self.labels.value / self.bottom.value * self.top.grad
+        self.bottom.grad += - (self.labels.value / self.bottom.value) / self.batch_size * self.loss.grad
 
