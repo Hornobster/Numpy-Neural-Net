@@ -62,9 +62,8 @@ class InnerProduct(Layer):
 
         for i in range(self.batch_size):
             self.w_grad += np.dot(self.bottom.value[i, np.newaxis].transpose(), self.top.grad[i, np.newaxis])
-        self.w_grad /= self.batch_size
 
-        self.b_grad = np.mean(self.top.grad, axis=0)
+        self.b_grad = np.sum(self.top.grad, axis=0)
 
 class LinearInterpolation(Layer):
     def __init__(self, prev_layer1, prev_layer2):

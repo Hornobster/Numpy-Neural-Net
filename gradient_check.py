@@ -211,8 +211,131 @@ def testReLu():
     ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
     print('%s ReLu: norm diff %f' % (ok, norm_diff))
 
+'''
+Tests the analytical gradient computed in the backward pass of the InnerProduct layer
+against the numerical gradient
+'''
+def testInnerProduct():
+    # create input layers
+    X = Input(5, 5)
+    L = Input(5, 5)
+    x = X.top.value
+    l = L.top.value
+    x[:] = np.random.rand(5, 5) - 0.5 # random values between -0.5 and 0.5
+    l[:] = np.eye(5)
+
+    # create inner product and mse loss layers
+    ip = InnerProduct(X, 5)
+    mse_loss = MSELoss(ip, L)
+    mse_loss.loss.grad = 1.0
+
+    ip.init_params()
+
+    # get analytical gradient
+    ip.forward()
+    mse_loss.forward()
+    mse_loss.backward()
+    ip.backward()
+    grad_x = ip.bottom.grad.copy()
+    grad_w = ip.w_grad.copy()
+    grad_b = ip.b_grad.copy()
+
+    # compute inputs X numerical gradient
+    num_grad_x = np.zeros_like(x)
+
+    for i in range(x.shape[0]):
+        for j in range(l.shape[1]):
+            old_x = x[i][j]
+
+            x[i][j] = old_x + epsilon
+
+            ip.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] = mse_loss.loss.value
+
+            x[i][j] = old_x - epsilon
+
+            ip.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] -= mse_loss.loss.value
+            num_grad_x[i][j] /= 2.0 * epsilon
+
+            x[i][j] = old_x
+
+    # compute weights W numerical gradient
+    w = ip.weights
+    num_grad_w = np.zeros_like(w)
+
+    for i in range(w.shape[0]):
+        for j in range(w.shape[1]):
+            old_w = w[i][j]
+
+            w[i][j] = old_w + epsilon
+
+            ip.forward()
+            mse_loss.forward()
+
+            num_grad_w[i][j] = mse_loss.loss.value
+
+            w[i][j] = old_w - epsilon
+
+            ip.forward()
+            mse_loss.forward()
+
+            num_grad_w[i][j] -= mse_loss.loss.value
+            num_grad_w[i][j] /= 2.0 * epsilon
+
+            w[i][j] = old_w
+
+    # compute bias B numerical gradient
+    b = ip.bias
+    num_grad_b = np.zeros_like(b)
+
+    for i in range(b.shape[0]):
+        old_b = b[i]
+
+        b[i] = old_b + epsilon
+
+        ip.forward()
+        mse_loss.forward()
+
+        num_grad_b[i] = mse_loss.loss.value
+
+        b[i] = old_b - epsilon
+
+        ip.forward()
+        mse_loss.forward()
+
+        num_grad_b[i] -= mse_loss.loss.value
+        num_grad_b[i] /= 2.0 * epsilon
+
+        b[i] = old_b
+
+    # inputs X
+    # print('num grad x', num_grad_x)
+    # print('grad x', grad_x)
+    norm_diff = np.linalg.norm(grad_x - num_grad_x) / np.linalg.norm(grad_x + num_grad_x)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s InnerProduct X: norm diff %f' % (ok, norm_diff))
+
+    # weights W
+    # print('num grad w', num_grad_w)
+    # print('grad w', grad_w)
+    norm_diff = np.linalg.norm(grad_w - num_grad_w) / np.linalg.norm(grad_w + num_grad_w)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s InnerProduct W: norm diff %f' % (ok, norm_diff))
+
+    # bias b
+    # print('num grad b', num_grad_b)
+    # print('grad b', grad_b)
+    norm_diff = np.linalg.norm(grad_b - num_grad_b) / np.linalg.norm(grad_b + num_grad_b)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s InnerProduct b: norm diff %f' % (ok, norm_diff))
+
 testSoftmaxCrossEntropyLoss()
 testMSELoss()
 testCrossEntropyLoss()
 testReLu()
-
+testInnerProduct()
