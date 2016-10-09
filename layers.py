@@ -173,7 +173,8 @@ class SoftmaxCrossEntropyLoss(Layer):
         self.loss.value = np.mean(self.cross_entropy(self.top.value, self.labels.value))
 
     def backward(self):
-        self.bottom.grad += (self.top.value - self.labels.value) * self.loss.grad
+        labels_sum = np.sum(self.labels.value, axis=1, keepdims=True)
+        self.bottom.grad += (np.multiply(self.top.value, labels_sum) - self.labels.value) / self.batch_size * self.loss.grad
 
 class MSELoss(Layer):
     def __init__(self, prev_layer, labels_layer):
