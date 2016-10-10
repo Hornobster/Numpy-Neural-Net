@@ -32,7 +32,7 @@ def testSoftmaxCrossEntropyLoss():
     num_grad_x = np.zeros_like(x)
 
     for i in range(x.shape[0]):
-        for j in range(l.shape[1]):
+        for j in range(x.shape[1]):
             old_x = x[i][j]
 
             x[i][j] = old_x + epsilon
@@ -82,7 +82,7 @@ def testMSELoss():
     num_grad_x = np.zeros_like(x)
 
     for i in range(x.shape[0]):
-        for j in range(l.shape[1]):
+        for j in range(x.shape[1]):
             old_x = x[i][j]
 
             x[i][j] = old_x + epsilon
@@ -132,7 +132,7 @@ def testCrossEntropyLoss():
     num_grad_x = np.zeros_like(x)
 
     for i in range(x.shape[0]):
-        for j in range(l.shape[1]):
+        for j in range(x.shape[1]):
             old_x = x[i][j]
 
             x[i][j] = old_x + epsilon
@@ -185,7 +185,7 @@ def testReLu():
     num_grad_x = np.zeros_like(x)
 
     for i in range(x.shape[0]):
-        for j in range(l.shape[1]):
+        for j in range(x.shape[1]):
             old_x = x[i][j]
 
             x[i][j] = old_x + epsilon
@@ -210,6 +210,61 @@ def testReLu():
     norm_diff = np.linalg.norm(grad_x - num_grad_x) / np.linalg.norm(grad_x + num_grad_x)
     ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
     print('%s ReLu: norm diff %f' % (ok, norm_diff))
+
+'''
+Tests the analytical gradient computed in the backward pass of the Softmax layer
+against the numerical gradient
+'''
+def testSoftmax():
+    # create input layers
+    X = Input(5, 5)
+    L = Input(5, 5)
+    x = X.top.value
+    l = L.top.value
+    x[:] = np.random.rand(5, 5) - 0.5 # random values between -0.5 and 0.5
+    l[:] = np.eye(5)
+
+    # create softmax and mse loss layers
+    softmax = Softmax(X)
+    mse_loss = MSELoss(softmax, L)
+    mse_loss.loss.grad = 1.0
+
+    # get analytical gradient
+    softmax.forward()
+    mse_loss.forward()
+    mse_loss.backward()
+    softmax.backward()
+    grad_x = softmax.bottom.grad.copy()
+
+    # compute numerical gradient
+    num_grad_x = np.zeros_like(x)
+
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            old_x = x[i][j]
+
+            x[i][j] = old_x + epsilon
+
+            softmax.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] = mse_loss.loss.value
+
+            x[i][j] = old_x - epsilon
+
+            softmax.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] -= mse_loss.loss.value
+            num_grad_x[i][j] /= 2.0 * epsilon
+
+            x[i][j] = old_x
+
+    # print('num grad', num_grad_x)
+    # print('grad', grad_x)
+    norm_diff = np.linalg.norm(grad_x - num_grad_x) / np.linalg.norm(grad_x + num_grad_x)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s Softmax: norm diff %f' % (ok, norm_diff))
 
 '''
 Tests the analytical gradient computed in the backward pass of the InnerProduct layer
@@ -244,7 +299,7 @@ def testInnerProduct():
     num_grad_x = np.zeros_like(x)
 
     for i in range(x.shape[0]):
-        for j in range(l.shape[1]):
+        for j in range(x.shape[1]):
             old_x = x[i][j]
 
             x[i][j] = old_x + epsilon
@@ -338,4 +393,5 @@ testSoftmaxCrossEntropyLoss()
 testMSELoss()
 testCrossEntropyLoss()
 testReLu()
+testSoftmax()
 testInnerProduct()
