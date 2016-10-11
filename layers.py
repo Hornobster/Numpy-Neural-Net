@@ -93,7 +93,7 @@ class LinearInterpolation(Layer):
     def backward(self):
         self.bottom1.grad += (1.0 - self.a) * self.top.grad
         self.bottom2.grad += self.a * self.top.grad
-        self.a_grad        = np.mean(np.sum((self.bottom2.value - self.bottom1.value) * self.top.grad, axis=1))
+        self.a_grad        = np.sum(np.multiply((self.bottom2.value - self.bottom1.value), self.top.grad))
 
 class Sin(Layer):
     def __init__(self, prev_layer):
@@ -121,7 +121,7 @@ class ReLu(Layer):
         self.top.value = np.maximum(0, self.bottom.value)
 
     def backward(self):
-        self.bottom.grad += (self.bottom.value > 0) * self.top.grad
+        self.bottom.grad += np.multiply((self.bottom.value > 0), self.top.grad)
 
 class Softmax(Layer):
     def __init__(self, prev_layer):

@@ -444,6 +444,126 @@ def testInnerProduct():
     ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
     print('%s InnerProduct b: norm diff %f' % (ok, norm_diff))
 
+'''
+Tests the analytical gradient computed in the backward pass of the LinearInterpolation layer
+against the numerical gradient
+'''
+def testLinearInterpolation():
+    # create input layers
+    X = Input(5, 5)
+    Y = Input(5, 5)
+    L = Input(5, 5)
+    x = X.top.value
+    y = Y.top.value
+    l = L.top.value
+    x[:] = np.random.rand(5, 5) - 0.5 # random values between -0.5 and 0.5
+    y[:] = np.random.rand(5, 5) - 0.5 # random values between -0.5 and 0.5
+    l[:] = np.eye(5)
+
+    # create inner product and mse loss layers
+    lerp = LinearInterpolation(X, Y)
+    mse_loss = MSELoss(lerp, L)
+    mse_loss.loss.grad = 1.0
+
+    lerp.init_params()
+
+    # get analytical gradient
+    lerp.forward()
+    mse_loss.forward()
+    mse_loss.backward()
+    lerp.backward()
+    grad_x = lerp.bottom1.grad.copy()
+    grad_y = lerp.bottom2.grad.copy()
+    grad_a = lerp.a_grad
+
+    # compute inputs X numerical gradient
+    num_grad_x = np.zeros_like(x)
+
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            old_x = x[i][j]
+
+            x[i][j] = old_x + epsilon
+
+            lerp.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] = mse_loss.loss.value
+
+            x[i][j] = old_x - epsilon
+
+            lerp.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] -= mse_loss.loss.value
+            num_grad_x[i][j] /= 2.0 * epsilon
+
+            x[i][j] = old_x
+
+    # compute inputs Y numerical gradient
+    num_grad_y = np.zeros_like(y)
+
+    for i in range(y.shape[0]):
+        for j in range(y.shape[1]):
+            old_y = y[i][j]
+
+            y[i][j] = old_y + epsilon
+
+            lerp.forward()
+            mse_loss.forward()
+
+            num_grad_y[i][j] = mse_loss.loss.value
+
+            y[i][j] = old_y - epsilon
+
+            lerp.forward()
+            mse_loss.forward()
+
+            num_grad_y[i][j] -= mse_loss.loss.value
+            num_grad_y[i][j] /= 2.0 * epsilon
+
+            y[i][j] = old_y
+
+
+    # compute alpha A numerical gradient
+    old_a = lerp.a
+
+    lerp.a = old_a + epsilon
+
+    lerp.forward()
+    mse_loss.forward()
+
+    num_grad_a = mse_loss.loss.value
+
+    lerp.a = old_a - epsilon
+
+    lerp.forward()
+    mse_loss.forward()
+
+    num_grad_a -= mse_loss.loss.value
+    num_grad_a /= 2.0 * epsilon
+
+    # inputs X
+    # print('num grad x', num_grad_x)
+    # print('grad x', grad_x)
+    norm_diff = np.linalg.norm(grad_x - num_grad_x) / np.linalg.norm(grad_x + num_grad_x)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s LinearInterpolation X: norm diff %f' % (ok, norm_diff))
+
+    # inputs Y
+    # print('num grad y', num_grad_y)
+    # print('grad y', grad_y)
+    norm_diff = np.linalg.norm(grad_y - num_grad_y) / np.linalg.norm(grad_y + num_grad_y)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s LinearInterpolation Y: norm diff %f' % (ok, norm_diff))
+
+    # alpha A
+    # print('num grad a', num_grad_a)
+    # print('grad a', grad_a)
+    norm_diff = np.linalg.norm(grad_a - num_grad_a) / np.linalg.norm(grad_a + num_grad_a)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s LinearInterpolation A: norm diff %f' % (ok, norm_diff))
+
 testSoftmaxCrossEntropyLoss()
 testMSELoss()
 testCrossEntropyLoss()
@@ -451,3 +571,4 @@ testReLu()
 testSin()
 testSoftmax()
 testInnerProduct()
+testLinearInterpolation()
