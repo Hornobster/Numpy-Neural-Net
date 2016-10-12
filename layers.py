@@ -140,8 +140,7 @@ class Sigmoid(Layer):
         self.top.value = 1.0 / (np.exp(-self.bottom.value) + 1)
 
     def backward(self):
-        exp = np.exp(self.bottom.value)
-        self.bottom.grad += np.multiply(exp / np.square(exp + 1), self.top.grad)
+        self.bottom.grad += np.multiply(np.multiply(1 - self.top.value, self.top.value), self.top.grad)
 
 class Softmax(Layer):
     def __init__(self, prev_layer):
