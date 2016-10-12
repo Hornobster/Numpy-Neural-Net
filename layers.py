@@ -9,12 +9,17 @@ class Blob:
     def reset_gradient(self):
         self.grad[:] = 0.0
 
+class Variable:
+    def __init__(self, data):
+        self.value = data
+        self.grad  = np.zeros_like(data)
+
 class Layer:
     def init_params(self):
         pass
 
-    def update_params(self, step_size):
-        pass
+    def get_params(self):
+        return None
 
     def reset_gradient(self):
         pass
@@ -40,30 +45,31 @@ class InnerProduct(Layer):
         self.top         = Blob(np.zeros((self.batch_size, self.num_outputs)))
 
     def init_params(self):
-        self.weights = np.random.rand(self.num_inputs, self.num_outputs) - 0.5
-        self.w_grad  = np.zeros_like(self.weights)
-        self.bias    = np.full(self.num_outputs, 0.1)
-        self.b_grad  = np.zeros_like(self.bias)
+        self.weights = Variable(np.random.rand(self.num_inputs, self.num_outputs) - 0.5)
+        self.bias    = Variable(np.full(self.num_outputs, 0.1))
+
+    def get_params(self):
+        return [self.weights, self.bias]
 
     def update_params(self, step_size):
-        self.weights += self.w_grad * step_size
-        self.bias    += self.b_grad * step_size
+        self.weights.value += self.weights.grad * step_size
+        self.bias.value    += self.bias.grad * step_size
 
     def reset_gradient(self):
         self.top.reset_gradient()
-        self.w_grad[:] = 0.0
-        self.b_grad[:] = 0.0
+        self.weights.grad[:] = 0.0
+        self.bias.grad[:]    = 0.0
     
     def forward(self):
-        self.top.value = np.dot(self.bottom.value, self.weights) + self.bias
+        self.top.value = np.dot(self.bottom.value, self.weights.value) + self.bias.value
 
     def backward(self):
-        self.bottom.grad += np.dot(self.top.grad, self.weights.transpose())
+        self.bottom.grad += np.dot(self.top.grad, self.weights.value.transpose())
 
         for i in range(self.batch_size):
-            self.w_grad += np.dot(self.bottom.value[i, np.newaxis].transpose(), self.top.grad[i, np.newaxis])
+            self.weights.grad += np.dot(self.bottom.value[i, np.newaxis].transpose(), self.top.grad[i, np.newaxis])
 
-        self.b_grad = np.sum(self.top.grad, axis=0)
+        self.bias.grad += np.sum(self.top.grad, axis=0)
 
 class LinearInterpolation(Layer):
     def __init__(self, prev_layer1, prev_layer2):
@@ -77,23 +83,22 @@ class LinearInterpolation(Layer):
         self.top        = Blob(np.zeros_like(self.bottom1.value))
 
     def init_params(self):
-        self.a      = 0.5
-        self.a_grad = 0.0
+        self.a      = Variable(0.5)
 
-    def update_params(self, step_size):
-        self.a += self.a_grad * step_size
+    def get_params(self):
+        return [self.a]
 
     def reset_gradient(self):
         self.top.reset_gradient()
-        self.a_grad = 0.0
+        self.a.grad = 0.0
 
     def forward(self):
-        self.top.value = (1.0 - self.a) * self.bottom1.value + self.a * self.bottom2.value
+        self.top.value = (1.0 - self.a.value) * self.bottom1.value + self.a.value * self.bottom2.value
 
     def backward(self):
-        self.bottom1.grad += (1.0 - self.a) * self.top.grad
-        self.bottom2.grad += self.a * self.top.grad
-        self.a_grad        = np.sum(np.multiply((self.bottom2.value - self.bottom1.value), self.top.grad))
+        self.bottom1.grad += (1.0 - self.a.value) * self.top.grad
+        self.bottom2.grad += self.a.value * self.top.grad
+        self.a.grad        = np.sum(np.multiply((self.bottom2.value - self.bottom1.value), self.top.grad))
 
 class Sin(Layer):
     def __init__(self, prev_layer):

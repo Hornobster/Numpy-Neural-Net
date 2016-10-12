@@ -21,7 +21,6 @@ def testSoftmaxCrossEntropyLoss():
 
     # create softmax loss layer 
     softmax_loss = SoftmaxCrossEntropyLoss(X, L)
-    softmax_loss.loss.grad = 1.0
 
     # get analytical gradient
     softmax_loss.forward()
@@ -71,7 +70,6 @@ def testMSELoss():
 
     # create mse loss layer
     mse_loss = MSELoss(X, L)
-    mse_loss.loss.grad = 1.0
 
     # get analytical gradient
     mse_loss.forward()
@@ -121,7 +119,6 @@ def testCrossEntropyLoss():
 
     # create cross entropy loss layer
     crossentropy_loss = CrossEntropyLoss(X, L)
-    crossentropy_loss.loss.grad = 1.0
 
     # get analytical gradient
     crossentropy_loss.forward()
@@ -172,7 +169,6 @@ def testReLu():
     # create relu and mse loss layers
     relu = ReLu(X)
     mse_loss = MSELoss(relu, L)
-    mse_loss.loss.grad = 1.0
 
     # get analytical gradient
     relu.forward()
@@ -227,7 +223,6 @@ def testSin():
     # create sin and mse loss layers
     sin = Sin(X)
     mse_loss = MSELoss(sin, L)
-    mse_loss.loss.grad = 1.0
 
     # get analytical gradient
     sin.forward()
@@ -282,7 +277,6 @@ def testSoftmax():
     # create softmax and mse loss layers
     softmax = Softmax(X)
     mse_loss = MSELoss(softmax, L)
-    mse_loss.loss.grad = 1.0
 
     # get analytical gradient
     softmax.forward()
@@ -337,7 +331,6 @@ def testInnerProduct():
     # create inner product and mse loss layers
     ip = InnerProduct(X, 5)
     mse_loss = MSELoss(ip, L)
-    mse_loss.loss.grad = 1.0
 
     ip.init_params()
 
@@ -347,8 +340,8 @@ def testInnerProduct():
     mse_loss.backward()
     ip.backward()
     grad_x = ip.bottom.grad.copy()
-    grad_w = ip.w_grad.copy()
-    grad_b = ip.b_grad.copy()
+    grad_w = ip.weights.grad.copy()
+    grad_b = ip.bias.grad.copy()
 
     # compute inputs X numerical gradient
     num_grad_x = np.zeros_like(x)
@@ -375,7 +368,7 @@ def testInnerProduct():
             x[i][j] = old_x
 
     # compute weights W numerical gradient
-    w = ip.weights
+    w = ip.weights.value
     num_grad_w = np.zeros_like(w)
 
     for i in range(w.shape[0]):
@@ -400,7 +393,7 @@ def testInnerProduct():
             w[i][j] = old_w
 
     # compute bias B numerical gradient
-    b = ip.bias
+    b = ip.bias.value
     num_grad_b = np.zeros_like(b)
 
     for i in range(b.shape[0]):
@@ -463,7 +456,6 @@ def testLinearInterpolation():
     # create inner product and mse loss layers
     lerp = LinearInterpolation(X, Y)
     mse_loss = MSELoss(lerp, L)
-    mse_loss.loss.grad = 1.0
 
     lerp.init_params()
 
@@ -474,7 +466,7 @@ def testLinearInterpolation():
     lerp.backward()
     grad_x = lerp.bottom1.grad.copy()
     grad_y = lerp.bottom2.grad.copy()
-    grad_a = lerp.a_grad
+    grad_a = lerp.a.grad
 
     # compute inputs X numerical gradient
     num_grad_x = np.zeros_like(x)
@@ -526,16 +518,16 @@ def testLinearInterpolation():
 
 
     # compute alpha A numerical gradient
-    old_a = lerp.a
+    old_a = lerp.a.value
 
-    lerp.a = old_a + epsilon
+    lerp.a.value = old_a + epsilon
 
     lerp.forward()
     mse_loss.forward()
 
     num_grad_a = mse_loss.loss.value
 
-    lerp.a = old_a - epsilon
+    lerp.a.value = old_a - epsilon
 
     lerp.forward()
     mse_loss.forward()

@@ -2,14 +2,18 @@ class NeuralNet:
     def __init__(self):
         self.layers = {}
         self.fwd_layers = []
+        self.params = []
 
     def init_params(self):
         for l in self.fwd_layers:
             l.init_params()
 
-    def update_params(self, step_size):
-        for l in self.fwd_layers:
-            l.update_params(step_size)
+            l_params = l.get_params()
+            if l_params is not None:
+                self.params += l_params
+
+    def get_params(self):
+        return self.params
 
     def reset_gradients(self):
         for l in self.fwd_layers:
