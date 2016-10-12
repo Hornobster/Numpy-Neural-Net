@@ -7,12 +7,15 @@ class Blob:
         self.shape = data.shape
 
     def reset_gradient(self):
-        self.grad[:] = 0.0
+        self.grad = np.zeros_like(self.grad)
 
 class Variable:
     def __init__(self, data):
         self.value = data
         self.grad  = np.zeros_like(data)
+
+    def reset_gradient(self):
+        self.grad = np.zeros_like(self.grad)
 
 class Layer:
     def init_params(self):
@@ -53,8 +56,8 @@ class InnerProduct(Layer):
 
     def reset_gradient(self):
         self.top.reset_gradient()
-        self.weights.grad[:] = 0.0
-        self.bias.grad[:]    = 0.0
+        self.weights.reset_gradient()
+        self.bias.reset_gradient()
     
     def forward(self):
         self.top.value = np.dot(self.bottom.value, self.weights.value) + self.bias.value
@@ -86,7 +89,7 @@ class LinearInterpolation(Layer):
 
     def reset_gradient(self):
         self.top.reset_gradient()
-        self.a.grad = 0.0
+        self.a.reset_gradient()
 
     def forward(self):
         self.top.value = (1.0 - self.a.value) * self.bottom1.value + self.a.value * self.bottom2.value
