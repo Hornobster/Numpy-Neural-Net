@@ -51,10 +51,6 @@ class InnerProduct(Layer):
     def get_params(self):
         return [self.weights, self.bias]
 
-    def update_params(self, step_size):
-        self.weights.value += self.weights.grad * step_size
-        self.bias.value    += self.bias.grad * step_size
-
     def reset_gradient(self):
         self.top.reset_gradient()
         self.weights.grad[:] = 0.0
