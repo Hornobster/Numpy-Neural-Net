@@ -171,6 +171,21 @@ class Softmax(Layer):
 
             self.bottom.grad[x] += np.dot(self.top.grad[x], jacobian)
 
+class Tanh(Layer):
+    def __init__(self, prev_layer):
+        self.bottom = prev_layer.top
+        self.top    = Blob(np.zeros_like(self.bottom.value))
+
+    def reset_gradient(self):
+        self.top.reset_gradient()
+
+    def forward(self):
+        exp2 = np.exp(2 * self.bottom.value)
+        self.top.value = (exp2 - 1) / (exp2 + 1)
+
+    def backward(self):
+        self.bottom.grad += np.multiply(1 - np.square(self.top.value), self.top.grad)
+
 class SoftmaxCrossEntropyLoss(Layer):
     def __init__(self, prev_layer, labels_layer):
         self.bottom     = prev_layer.top

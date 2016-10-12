@@ -262,6 +262,60 @@ def testSigmoid():
     print('%s Sigmoid: norm diff %f' % (ok, norm_diff))
 
 '''
+Tests the analytical gradient computed in the backward pass of the Tanh layer
+against the numerical gradient
+'''
+def testTanh():
+    # create input layers
+    X = Input(5, 5)
+    L = Input(5, 5)
+    x = X.top.value
+    l = L.top.value
+    x[:] = np.random.rand(5, 5) - 0.5 # random values between -0.5 and 0.5
+    l[:] = np.eye(5)
+
+    # create tanh and mse loss layers
+    tanh = Tanh(X)
+    mse_loss = MSELoss(tanh, L)
+
+    # get analytical gradient
+    tanh.forward()
+    mse_loss.forward()
+    mse_loss.backward()
+    tanh.backward()
+    grad_x = tanh.bottom.grad.copy()
+
+    # compute numerical gradient
+    num_grad_x = np.zeros_like(x)
+
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            old_x = x[i][j]
+
+            x[i][j] = old_x + epsilon
+
+            tanh.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] = mse_loss.loss.value
+
+            x[i][j] = old_x - epsilon
+
+            tanh.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] -= mse_loss.loss.value
+            num_grad_x[i][j] /= 2.0 * epsilon
+
+            x[i][j] = old_x
+
+    # print('num grad', num_grad_x)
+    # print('grad', grad_x)
+    norm_diff = np.linalg.norm(grad_x - num_grad_x) / np.linalg.norm(grad_x + num_grad_x)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s Tanh: norm diff %f' % (ok, norm_diff))
+
+'''
 Tests the analytical gradient computed in the backward pass of the Sin layer
 against the numerical gradient
 '''
@@ -617,5 +671,6 @@ testReLu()
 testSigmoid()
 testSin()
 testSoftmax()
+testTanh()
 testInnerProduct()
 testLinearInterpolation()
