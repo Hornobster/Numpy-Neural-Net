@@ -7,6 +7,7 @@ mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
 from layers import *
 from nn import *
+from optimisers import *
 
 batch_size = 100
 
@@ -51,6 +52,8 @@ val_accuracy = []
 val_iter = []
 
 # training
+optimiser = GradientDescentOptimiser(nn, step_size).minimise()
+
 epochs = 1
 train_samples = 55000
 validation_samples = 5000
@@ -68,15 +71,8 @@ for epoch in range(epochs):
         i.top.value[...] = batch_x
         l.top.value[...] = batch_y
 
-        nn.forward()
-
-        nn.reset_gradients()
-
-        # minimise loss
-        softmax_loss.loss.grad = -1.0
-
-        nn.backward()
-        nn.update_params(step_size)
+        # forward -> backward -> params update
+        optimiser.step()
 
         # validation
         if batch % test_interval == 0:
