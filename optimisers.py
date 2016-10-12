@@ -35,4 +35,21 @@ class GradientDescentOptimiser(Optimiser):
         for param in self.nn.get_params():
             param.value += (self.step_sign * self.step_size) * param.grad
 
+class GradientDescentMomentumOptimiser(Optimiser):
+    def __init__(self, network, step_size, momentum = 0.9):
+        Optimiser.__init__(self, network)
+
+        self.step_size = abs(step_size)
+        self.momentum  = momentum
+
+        # initialise variables for momentum
+        self.last_param_updates = []
+        for param in self.nn.get_params():
+            self.last_param_updates.append(np.zeros_like(param.value))
+
+    def update_params(self):
+        for param, last_update in zip(self.nn.get_params(), self.last_param_updates):
+            update          = self.momentum * last_update + self.step_size * param.grad
+            param.value    += self.step_sign * update
+            last_update[:]  = update
 
