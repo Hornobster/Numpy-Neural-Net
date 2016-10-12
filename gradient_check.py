@@ -208,6 +208,60 @@ def testReLu():
     print('%s ReLu: norm diff %f' % (ok, norm_diff))
 
 '''
+Tests the analytical gradient computed in the backward pass of the Sigmoid layer
+against the numerical gradient
+'''
+def testSigmoid():
+    # create input layers
+    X = Input(5, 5)
+    L = Input(5, 5)
+    x = X.top.value
+    l = L.top.value
+    x[:] = np.random.rand(5, 5) - 0.5 # random values between -0.5 and 0.5
+    l[:] = np.eye(5)
+
+    # create sigmoid and mse loss layers
+    sigmoid = Sigmoid(X)
+    mse_loss = MSELoss(sigmoid, L)
+
+    # get analytical gradient
+    sigmoid.forward()
+    mse_loss.forward()
+    mse_loss.backward()
+    sigmoid.backward()
+    grad_x = sigmoid.bottom.grad.copy()
+
+    # compute numerical gradient
+    num_grad_x = np.zeros_like(x)
+
+    for i in range(x.shape[0]):
+        for j in range(x.shape[1]):
+            old_x = x[i][j]
+
+            x[i][j] = old_x + epsilon
+
+            sigmoid.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] = mse_loss.loss.value
+
+            x[i][j] = old_x - epsilon
+
+            sigmoid.forward()
+            mse_loss.forward()
+
+            num_grad_x[i][j] -= mse_loss.loss.value
+            num_grad_x[i][j] /= 2.0 * epsilon
+
+            x[i][j] = old_x
+
+    # print('num grad', num_grad_x)
+    # print('grad', grad_x)
+    norm_diff = np.linalg.norm(grad_x - num_grad_x) / np.linalg.norm(grad_x + num_grad_x)
+    ok = 'GOOD' if norm_diff < 1e-8 else 'BAD'
+    print('%s Sigmoid: norm diff %f' % (ok, norm_diff))
+
+'''
 Tests the analytical gradient computed in the backward pass of the Sin layer
 against the numerical gradient
 '''
@@ -560,6 +614,7 @@ testSoftmaxCrossEntropyLoss()
 testMSELoss()
 testCrossEntropyLoss()
 testReLu()
+testSigmoid()
 testSin()
 testSoftmax()
 testInnerProduct()

@@ -128,6 +128,21 @@ class ReLu(Layer):
     def backward(self):
         self.bottom.grad += np.multiply((self.bottom.value > 0), self.top.grad)
 
+class Sigmoid(Layer):
+    def __init__(self, prev_layer):
+        self.bottom = prev_layer.top
+        self.top    = Blob(np.zeros_like(self.bottom.value))
+
+    def reset_gradient(self):
+        self.top.reset_gradient()
+
+    def forward(self):
+        self.top.value = 1.0 / (np.exp(-self.bottom.value) + 1)
+
+    def backward(self):
+        exp = np.exp(self.bottom.value)
+        self.bottom.grad += np.multiply(exp / np.square(exp + 1), self.top.grad)
+
 class Softmax(Layer):
     def __init__(self, prev_layer):
         self.bottom      = prev_layer.top
