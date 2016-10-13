@@ -8,6 +8,7 @@ mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 from layers import *
 from nn import *
 from optimisers import *
+from regularisers import *
 
 batch_size = 100
 
@@ -25,7 +26,7 @@ relu3 = nn.add('relu3', ReLu(fc3))
 fc4 = nn.add('fc4', InnerProduct(relu3, 10))
 relu4 = nn.add('relu4', ReLu(fc4))
 '''
-fc5 = nn.add('fc5', InnerProduct(i, 10))
+fc5 = nn.add('fc5', InnerProduct(i, 10, regulariser = L2Regulariser(0.1)))
 softmax_loss = nn.add('softmax', SoftmaxCrossEntropyLoss(fc5, l))
 #loss = nn.add('loss', CrossEntropyLoss(softmax, l))
 

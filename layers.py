@@ -38,7 +38,7 @@ class Input(Layer):
         self.top = Blob(np.zeros((batch_size, input_size)))
 
 class InnerProduct(Layer):
-    def __init__(self, prev_layer, num_outputs):
+    def __init__(self, prev_layer, num_outputs, regulariser = None):
         self.bottom      = prev_layer.top
         # num rows in bottom is the batch size
         # num columns in bottom is each input size
@@ -46,6 +46,8 @@ class InnerProduct(Layer):
         self.num_inputs  = self.bottom.value.shape[1]
         self.num_outputs = num_outputs
         self.top         = Blob(np.zeros((self.batch_size, self.num_outputs)))
+
+        self.regulariser = regulariser
 
     def init_params(self):
         self.weights = Variable(np.random.rand(self.num_inputs, self.num_outputs) - 0.5)
@@ -67,6 +69,9 @@ class InnerProduct(Layer):
 
         for i in range(self.batch_size):
             self.weights.grad += np.dot(self.bottom.value[i, np.newaxis].transpose(), self.top.grad[i, np.newaxis])
+
+        if self.regulariser is not None:
+            self.weights.grad += self.regulariser.get_gradient(self.weights.value) / self.batch_size
 
         self.bias.grad += np.sum(self.top.grad, axis=0)
 
