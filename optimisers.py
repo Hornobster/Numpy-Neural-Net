@@ -63,3 +63,26 @@ class GradientDescentMomentumOptimiser(Optimiser):
             param.value    += self.step_sign * update
             last_update[:]  = update
 
+class NesterovAcceleratedGradientOptimiser(Optimiser):
+    def __init__(self, network, step_size, momentum = 0.9):
+        Optimiser.__init__(self, network)
+
+        self.step_size = abs(step_size)
+        self.momentum = momentum
+
+        # initialise variables for momentum
+        self.last_params_updates = []
+        for param in self.nn.get_params():
+            self.last_params_updates.append(np.zeros_like(param.value))
+
+    def before_forward(self):
+        for param, last_update in zip(self.nn.get_params(), self.last_params_updates):
+            param.value += (self.step_sign * self.momentum) * last_update
+
+    def update_params(self):
+        for param, last_update in zip(self.nn.get_params(), self.last_params_updates):
+            update          = self.momentum * last_update + self.step_size * param.grad
+            # add only the second update factor, since we've already added the first factor in before_forward()
+            param.value    += (self.step_sign * self.step_size) * param.grad
+            last_update[:]  = update
+
