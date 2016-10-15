@@ -5,10 +5,20 @@ class Optimiser:
         self.nn        = network
         self.step_sign = -1.0 # minimise by default
 
+    def before_forward(self):
+        pass
+
+    def before_backward(self):
+        pass
+
     def step(self):
+        self.before_forward()
+
         self.nn.forward()
 
         self.nn.reset_gradients()
+
+        self.before_backward()
 
         self.nn.backward()
 
@@ -43,12 +53,12 @@ class GradientDescentMomentumOptimiser(Optimiser):
         self.momentum  = momentum
 
         # initialise variables for momentum
-        self.last_param_updates = []
+        self.last_params_updates = []
         for param in self.nn.get_params():
-            self.last_param_updates.append(np.zeros_like(param.value))
+            self.last_params_updates.append(np.zeros_like(param.value))
 
     def update_params(self):
-        for param, last_update in zip(self.nn.get_params(), self.last_param_updates):
+        for param, last_update in zip(self.nn.get_params(), self.last_params_updates):
             update          = self.momentum * last_update + self.step_size * param.grad
             param.value    += self.step_sign * update
             last_update[:]  = update
