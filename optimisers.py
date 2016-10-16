@@ -133,3 +133,25 @@ class AdaDeltaOptimiser(Optimiser):
             # apply update
             param.value += self.step_sign * update
 
+class RMSPropOptimiser(Optimiser):
+    def __init__(self, network, step_size = 0.001, decay_rate = 0.9, epsilon = 1e-8):
+        Optimiser.__init__(self, network)
+
+        self.step_size  = step_size
+        self.decay_rate = decay_rate
+        self.epsilon    = epsilon
+
+        # initialise moving average of square of gradients
+        self.gradients_acc_square = []
+        for param in self.nn.get_params():
+            self.gradients_acc_square.append(np.zeros_like(param.grad))
+
+    def update_params(self):
+        for param, gradient_acc_square in zip(self.nn.get_params(), self.gradients_acc_square):
+            # accumulate gradient
+            gradient_acc_square *= self.decay_rate
+            gradient_acc_square += (1.0 - self.decay_rate) * np.square(param.grad)
+
+            # apply update
+            param.value += np.multiply((self.step_sign * self.step_size) / np.sqrt(gradient_acc_square + self.epsilon), param.grad)
+
