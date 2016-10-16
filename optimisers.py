@@ -86,3 +86,20 @@ class NesterovAcceleratedGradientOptimiser(Optimiser):
             param.value    += (self.step_sign * self.step_size) * param.grad
             last_update[:]  = update
 
+class AdagradOptimiser(Optimiser):
+    def __init__(self, network, step_size = 0.01, epsilon = 1e-8):
+        Optimiser.__init__(self, network)
+
+        self.step_size = abs(step_size)
+        self.epsilon   = epsilon
+
+        # initialise accumulated square of gradients
+        self.gradients_acc_square = []
+        for param in self.nn.get_params():
+            self.gradients_acc_square.append(np.zeros_like(param.grad))
+
+    def update_params(self):
+        for param, acc_square in zip(self.nn.get_params(), self.gradients_acc_square):
+            acc_square  += np.square(param.grad)
+            param.value += self.step_sign * np.multiply(param.grad, self.step_size / np.sqrt(acc_square + self.epsilon))
+
