@@ -141,7 +141,7 @@ class RMSPropOptimiser(Optimiser):
         self.decay_rate = decay_rate
         self.epsilon    = epsilon
 
-        # initialise moving average of square of gradients
+        # initialise decaying average of square of gradients
         self.gradients_acc_square = []
         for param in self.nn.get_params():
             self.gradients_acc_square.append(np.zeros_like(param.grad))
@@ -154,4 +154,51 @@ class RMSPropOptimiser(Optimiser):
 
             # apply update
             param.value += np.multiply((self.step_sign * self.step_size) / np.sqrt(gradient_acc_square + self.epsilon), param.grad)
+
+class AdamOptimiser(Optimiser):
+    def __init__(self, network, step_size = 0.005, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-8):
+        Optimiser.__init__(self, network)
+
+        self.step_size = step_size
+        self.beta1     = beta1
+        self.beta2     = beta2
+        self.epsilon   = epsilon
+
+        # initialise time step
+        self.t = 0
+
+        # initialise decaying average of square of gradients and of gradients
+        self.gradients_acc = []
+        self.gradients_acc_square = []
+        for param in self.nn.get_params():
+            self.gradients_acc.append(np.zeros_like(param.grad))
+            self.gradients_acc_square.append(np.zeros_like(param.grad))
+
+        # beta ** t accumulated
+        self.beta1_acc = 1.0
+        self.beta2_acc = 1.0
+
+    def update_params(self):
+        for param, gradient_acc, gradient_acc_square in zip(self.nn.get_params(), self.gradients_acc, self.gradients_acc_square):
+            # increment time step
+            self.t += 1
+
+            # accumulate gradient
+            gradient_acc *= self.beta1
+            gradient_acc += (1.0 - self.beta1) * param.grad
+
+            # accumulate square of gradient
+            gradient_acc_square *= self.beta2
+            gradient_acc_square += (1.0 - self.beta2) * np.square(param.grad)
+
+            # first moment (mean), bias-corrected
+            self.beta1_acc *= self.beta1
+            m = gradient_acc / (1.0 - self.beta1_acc)
+
+            # second moment (variance), bias-corrected
+            self.beta2_acc *= self.beta2
+            v = gradient_acc_square / (1.0 - self.beta2)
+
+            # apply update
+            param.value += np.multiply((self.step_sign * self.step_size) / np.sqrt(v + self.epsilon), m)
 
