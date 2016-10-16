@@ -103,3 +103,33 @@ class AdagradOptimiser(Optimiser):
             acc_square  += np.square(param.grad)
             param.value += self.step_sign * np.multiply(param.grad, self.step_size / np.sqrt(acc_square + self.epsilon))
 
+class AdaDeltaOptimiser(Optimiser):
+    def __init__(self, network, decay_rate = 0.9, epsilon = 1e-8):
+        Optimiser.__init__(self, network)
+
+        self.decay_rate = decay_rate
+        self.epsilon = epsilon
+
+        # initialise accumulated square of gradients and updates
+        self.gradients_acc_square = []
+        self.updates_acc_square = []
+        for param in self.nn.get_params():
+            self.gradients_acc_square.append(np.zeros_like(param.grad))
+            self.updates_acc_square.append(np.zeros_like(param.value))
+
+    def update_params(self):
+        for param, gradient_acc_square, update_acc_square in zip(self.nn.get_params(), self.gradients_acc_square, self.updates_acc_square):
+            # accumulate gradient
+            gradient_acc_square *= self.decay_rate
+            gradient_acc_square += (1.0 - self.decay_rate) * np.square(param.grad)
+
+            # compute update
+            update = np.multiply(np.sqrt(update_acc_square + self.epsilon) / np.sqrt(gradient_acc_square + self.epsilon), param.grad)
+
+            # accumulate update
+            update_acc_square *= self.decay_rate
+            update_acc_square += (1.0 - self.decay_rate) * np.square(update)
+
+            # apply update
+            param.value += self.step_sign * update
+
